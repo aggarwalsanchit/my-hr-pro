@@ -34,7 +34,8 @@ RUN echo "=== Verifying cache directory ===" && \
 
 # Step 4: Create .env file
 RUN echo "APP_ENV=production" > /var/www/html/.env && \
-    echo "APP_DEBUG=false" >> /var/www/html/.env && \
+    echo "APP_DEBUG=true" >> /var/www/html/.env && \
+    echo "APP_URL=https://my-hr-pro.onrender.com" >> /var/www/html/.env && \
     echo "APP_KEY=${APP_KEY}" >> /var/www/html/.env && \
     chmod 644 /var/www/html/.env
 
@@ -47,12 +48,37 @@ RUN composer run-script post-autoload-dump 2>/dev/null || true
 # Step 7: Run package discovery with explicit cache path
 RUN php artisan package:discover --ansi || echo "Package discovery completed"
 
-# Step 8: Build frontend
-RUN npm install && npm run build
+# ===== FRONTEND BUILD WITH VERIFICATION =====
+# Step 8: Install Node dependencies
+RUN echo "=== Installing Node dependencies ===" && \
+    npm install
 
-# Step 9: Configure Apache
+# Step 9: Build frontend with verification
+RUN echo "=== Building Vite assets ===" && \
+    npm run build && \
+    echo "=== Build completed ==="
+
+# Step 10: VERIFY BUILD OUTPUT
+RUN echo "=== Verifying build output ===" && \
+    echo "Contents of public/build:" && \
+    ls -la /var/www/html/public/build/ || echo "❌ Build directory not found!" && \
+    if [ -f /var/www/html/public/build/manifest.json ]; then \
+        echo "✅ manifest.json found!"; \
+        cat /var/www/html/public/build/manifest.json | head -20; \
+    else \
+        echo "❌ manifest.json NOT found!"; \
+        echo "Looking for manifest.json anywhere..."; \
+        find /var/www/html -name "manifest.json" 2>/dev/null || echo "No manifest.json found anywhere"; \
+        echo "Checking if Vite is installed..."; \
+        npx vite --version || echo "Vite not found"; \
+        exit 1; \
+    fi
+
+# Step 11: Configure Apache
 RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
-    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf \
+    && echo "php_flag display_errors on" >> /etc/apache2/apache2.conf \
+    && echo "php_flag display_startup_errors on" >> /etc/apache2/apache2.conf
 
 EXPOSE 80
 
