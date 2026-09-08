@@ -13,17 +13,19 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Create directories
+# --- CRITICAL FIX ---
+# Create bootstrap/cache directory and set permissions before any artisan command
 RUN mkdir -p bootstrap/cache \
     && mkdir -p storage/framework/{cache,sessions,views} \
     && mkdir -p storage/logs storage/installed \
     && chmod -R 775 storage bootstrap/cache
 
-# Create cache files
+# Create the required cache files that Laravel expects
 RUN echo "<?php return [];" > bootstrap/cache/services.php \
     && echo "<?php return [];" > bootstrap/cache/packages.php
 
-# Create .env file (will be overridden by Render's environment variables)
+# --- Rest of the build ---
+# Create minimal .env file
 RUN echo "APP_ENV=production" > .env && \
     echo "APP_DEBUG=false" >> .env && \
     echo "APP_KEY=${APP_KEY}" >> .env && \
@@ -37,13 +39,15 @@ RUN php artisan package:discover --ansi || echo "Package discovery completed"
 
 RUN npm install && npm run build
 
+# Configure Apache
 RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
     && echo "ServerName localhost" >> /etc/apache2/apache2.conf \
     && echo "php_flag display_errors on" >> /etc/apache2/apache2.conf
 
 EXPOSE 80
 
-# Remove key:generate, just run migrations and start Apache
+# --- Start command ---
+# Remove key:generate since you already have APP_KEY in Render's environment
 CMD /bin/bash -c "\
     php artisan migrate --force && \
-    apache2-foreground" 
+    apache2-foreground"
