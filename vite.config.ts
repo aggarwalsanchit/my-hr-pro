@@ -28,13 +28,15 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/css/dark-mode.css', 'resources/js/app.tsx'],
             ssr: 'resources/js/ssr.tsx',
             refresh: true,
+            // ✅ Add this to control manifest location
+            buildDirectory: 'build',
         }),
         stripUseClientDirective(),
         tailwindcss(),
     ],
     server: {
         host: '0.0.0.0',
-        https: false,  // ✅ This fixes the TypeScript error
+        https: false,
         headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
@@ -65,5 +67,7 @@ export default defineConfig({
         },
         assetsDir: 'assets',
         manifest: true,
+        // ✅ Also add this to ensure build output goes to the right place
+        outDir: 'public/build',
     }
 });
