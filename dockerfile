@@ -13,46 +13,37 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# CRITICAL: Create cache directories BEFORE composer install
+# Create directories
 RUN mkdir -p bootstrap/cache \
-    && mkdir -p storage/framework/cache \
-    && mkdir -p storage/framework/sessions \
-    && mkdir -p storage/framework/views \
-    && mkdir -p storage/logs \
-    && mkdir -p storage/installed \
+    && mkdir -p storage/framework/{cache,sessions,views} \
+    && mkdir -p storage/logs storage/installed \
     && chmod -R 775 storage bootstrap/cache
 
-# Create empty cache files
+# Create cache files
 RUN echo "<?php return [];" > bootstrap/cache/services.php \
-    && echo "<?php return [];" > bootstrap/cache/packages.php \
-    && chmod 775 bootstrap/cache/*
+    && echo "<?php return [];" > bootstrap/cache/packages.php
 
-# Create .env file
-RUN if [ -f .env.example ]; then \
-        cp .env.example .env; \
-    else \
-        echo "APP_ENV=production" > .env && \
-        echo "APP_DEBUG=false" >> .env && \
-        echo "APP_URL=https://my-hr-pro.onrender.com" >> .env; \
-    fi && \
+# Create .env file (will be overridden by Render's environment variables)
+RUN echo "APP_ENV=production" > .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_KEY=${APP_KEY}" >> .env && \
     chmod 644 .env
 
-# Install dependencies (with --no-scripts to avoid post-autoload-dump)
+# Install dependencies
 RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
 
-# Now run post-autoload-dump manually
+# Run package discovery
 RUN php artisan package:discover --ansi || echo "Package discovery completed"
 
-# Install Node dependencies and build
 RUN npm install && npm run build
 
-# Configure Apache
 RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
-    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf \
+    && echo "php_flag display_errors on" >> /etc/apache2/apache2.conf
 
 EXPOSE 80
 
+# Remove key:generate, just run migrations and start Apache
 CMD /bin/bash -c "\
-    php artisan key:generate --force --no-interaction && \
     php artisan migrate --force && \
-    apache2-foreground"
+    apache2-foreground" 
