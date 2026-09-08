@@ -13,7 +13,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Step 1: Create ALL required directories with absolute paths
+# Create directories
 RUN mkdir -p /var/www/html/bootstrap/cache \
     && mkdir -p /var/www/html/storage/framework/cache \
     && mkdir -p /var/www/html/storage/framework/sessions \
@@ -23,62 +23,57 @@ RUN mkdir -p /var/www/html/bootstrap/cache \
     && chmod -R 777 /var/www/html/storage \
     && chmod -R 777 /var/www/html/bootstrap/cache
 
-# Step 2: Create cache files
+# Create cache files
 RUN echo "<?php return [];" > /var/www/html/bootstrap/cache/services.php \
     && echo "<?php return [];" > /var/www/html/bootstrap/cache/packages.php \
     && chmod 777 /var/www/html/bootstrap/cache/*
 
-# Step 3: Verify cache directory exists
-RUN echo "=== Verifying cache directory ===" && \
-    ls -la /var/www/html/bootstrap/cache/
-
-# Step 4: Create .env file
+# Create .env file
 RUN echo "APP_ENV=production" > /var/www/html/.env && \
     echo "APP_DEBUG=true" >> /var/www/html/.env && \
     echo "APP_URL=https://my-hr-pro.onrender.com" >> /var/www/html/.env && \
     echo "APP_KEY=${APP_KEY}" >> /var/www/html/.env && \
     chmod 644 /var/www/html/.env
 
-# Step 5: Install composer without scripts
+# Install composer
 RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
 
-# Step 6: Manually run post-autoload-dump with error suppression
+# Run post-autoload-dump
 RUN composer run-script post-autoload-dump 2>/dev/null || true
 
-# Step 7: Run package discovery with explicit cache path
+# Run package discovery
 RUN php artisan package:discover --ansi || echo "Package discovery completed"
 
-# ===== FRONTEND BUILD WITH VERIFICATION =====
-# Step 8: Install Node dependencies
+# ===== FRONTEND BUILD =====
 RUN echo "=== Installing Node dependencies ===" && \
     npm install
 
-# Step 9: Build frontend with verification
-RUN echo "=== Building Vite assets ===" && \
-    npm run build && \
-    echo "=== Build completed ==="
+RUN echo "=== Checking Vite version ===" && \
+    npx vite --version
 
-# Step 10: VERIFY BUILD OUTPUT
-RUN echo "=== Verifying build output ===" && \
-    echo "Contents of public/build:" && \
-    ls -la /var/www/html/public/build/ || echo "❌ Build directory not found!" && \
-    if [ -f /var/www/html/public/build/manifest.json ]; then \
+RUN echo "=== Running Vite build ===" && \
+    npx vite build
+
+RUN echo "=== Checking build output ===" && \
+    ls -la /var/www/html/public/ && \
+    ls -la /var/www/html/public/build/ 2>/dev/null || echo "Build directory missing"
+
+RUN if [ -f /var/www/html/public/build/manifest.json ]; then \
         echo "✅ manifest.json found!"; \
-        cat /var/www/html/public/build/manifest.json | head -20; \
+        cat /var/www/html/public/build/manifest.json; \
     else \
         echo "❌ manifest.json NOT found!"; \
-        echo "Looking for manifest.json anywhere..."; \
-        find /var/www/html -name "manifest.json" 2>/dev/null || echo "No manifest.json found anywhere"; \
-        echo "Checking if Vite is installed..."; \
-        npx vite --version || echo "Vite not found"; \
+        echo "Searching for manifest.json..."; \
+        find /var/www/html -name "manifest.json" 2>/dev/null || echo "No manifest.json found"; \
+        echo "Checking node_modules..."; \
+        ls -la /var/www/html/node_modules/.bin/ | grep vite || echo "Vite not installed"; \
         exit 1; \
     fi
 
-# Step 11: Configure Apache
+# Configure Apache
 RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
     && echo "ServerName localhost" >> /etc/apache2/apache2.conf \
-    && echo "php_flag display_errors on" >> /etc/apache2/apache2.conf \
-    && echo "php_flag display_startup_errors on" >> /etc/apache2/apache2.conf
+    && echo "php_flag display_errors on" >> /etc/apache2/apache2.conf
 
 EXPOSE 80
 

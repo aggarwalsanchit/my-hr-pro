@@ -23,8 +23,6 @@ function stripUseClientDirective(): import('vite').Plugin {
 }
 
 export default defineConfig({
-    // Remove base: './' - this causes relative paths that break HTTPS
-    // base: './',
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/css/dark-mode.css', 'resources/js/app.tsx'],
@@ -35,8 +33,8 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
-        host: '0.0.0.0', // Changed from 'localhost' to bind to all interfaces
-        https: process.env.APP_ENV === 'production', // Enable HTTPS in production
+        host: '0.0.0.0',
+        https: false,  // ✅ This fixes the TypeScript error
         headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
@@ -46,7 +44,6 @@ export default defineConfig({
             ignored: ['**/vendor/**', '**/node_modules/**']
         }
     },
-
     esbuild: {
         jsx: 'automatic',
         jsxImportSource: 'react',
@@ -67,7 +64,6 @@ export default defineConfig({
             },
         },
         assetsDir: 'assets',
-        // Force absolute URLs for assets in production
         manifest: true,
     }
 });
