@@ -1,0 +1,66 @@
+# PHPUnit
+/.phpunit.cache
+/.phpunit.result.cache
+
+# Bootstrap
+/bootstrap/ssr
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitkeep
+
+# Node
+/node_modules
+/npm-debug.log
+/yarn-error.log
+
+# Build
+/public/build
+/public/hot
+/public/storage
+/public/screenshots
+
+# Storage
+/storage/*.key
+/storage/pail
+/storage/logs/*.log
+/storage/uploads/*
+/storage/debugbar/
+/storage/installed/*.log
+
+# Keep storage/framework structure but ignore contents
+/storage/framework/cache/*.php
+/storage/framework/sessions/*.php
+/storage/framework/testing/*.php
+/storage/framework/views/*.php
+!/storage/framework/.gitkeep
+
+# Vendor
+/vendor
+
+# Environment
+/.env
+/.env.backup
+/.env.production
+/.env.*.local
+
+# IDE
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+
+# Other
+/.phpactor.json
+/Homestead.json
+/Homestead.yaml
+/auth.json
+/.DS_Store
+*.sqlite
+*.sqlite-journal
+Thumbs.db
+
+# CRITICAL: DO NOT IGNORE THESE FILES
+# !/config/app.php
+# !/config/verification.php
+# !/storage/framework
+# !/storage/logs
