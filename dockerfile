@@ -54,19 +54,23 @@ RUN echo "=== Checking Vite version ===" && \
 RUN echo "=== Running Vite build ===" && \
     npx vite build
 
+# ===== VERIFY AND FIX MANIFEST =====
 RUN echo "=== Checking build output ===" && \
     ls -la /var/www/html/public/ && \
-    ls -la /var/www/html/public/build/ 2>/dev/null || echo "Build directory missing"
+    ls -la /var/www/html/public/build/ 2>/dev/null || echo "Build directory missing" && \
+    ls -la /var/www/html/public/build/.vite/ 2>/dev/null || echo ".vite directory missing"
 
 RUN if [ -f /var/www/html/public/build/manifest.json ]; then \
-        echo "✅ manifest.json found!"; \
-        cat /var/www/html/public/build/manifest.json; \
+        echo "✅ manifest.json found at root!"; \
+    elif [ -f /var/www/html/public/build/.vite/manifest.json ]; then \
+        echo "✅ manifest.json found in .vite directory!"; \
+        echo "Copying manifest.json to root..."; \
+        cp /var/www/html/public/build/.vite/manifest.json /var/www/html/public/build/manifest.json; \
+        echo "✅ manifest.json copied to root!"; \
     else \
         echo "❌ manifest.json NOT found!"; \
         echo "Searching for manifest.json..."; \
         find /var/www/html -name "manifest.json" 2>/dev/null || echo "No manifest.json found"; \
-        echo "Checking node_modules..."; \
-        ls -la /var/www/html/node_modules/.bin/ | grep vite || echo "Vite not installed"; \
         exit 1; \
     fi
 
