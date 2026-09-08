@@ -8,6 +8,8 @@ use App\Observers\UserObserver;
 use App\Observers\PlanObserver;
 use App\Providers\AssetServiceProvider;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ===== FORCE HTTPS IN PRODUCTION =====
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+            
+            // Also force HTTPS for Vite assets
+            if (class_exists(Vite::class)) {
+                Vite::useBuildDirectory('build');
+            }
+        }
+
         // Register the UserObserver
         User::observe(UserObserver::class);
         

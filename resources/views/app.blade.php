@@ -5,6 +5,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- FORCE HTTPS for all resources -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 
     {{-- Inline script to detect system dark mode preference and apply it immediately --}}
     <script>
@@ -60,30 +63,49 @@
 
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+    <!-- Fonts - Always use HTTPS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="{{ asset('js/jquery.min.js') }}"></script>
+    
+    <!-- jQuery - Use HTTPS version -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
     @routes
     @if (app()->environment('local'))
         @viteReactRefresh
     @endif
     @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+    
     <script>
-        // Ensure base URL is correctly set for assets
+        // Ensure base URL is correctly set for assets with HTTPS
         window.baseUrl = '{{ url('/') }}';
+        
+        // Force HTTPS for base URL if it's HTTP
+        if (window.baseUrl.startsWith('http://')) {
+            window.baseUrl = window.baseUrl.replace('http://', 'https://');
+        }
 
-        // Define asset helper function
+        // Define asset helper function with HTTPS
         window.asset = function(path) {
-            return "{{ asset('') }}" + path;
+            let assetUrl = "{{ asset('') }}" + path;
+            if (assetUrl.startsWith('http://')) {
+                assetUrl = assetUrl.replace('http://', 'https://');
+            }
+            return assetUrl;
         };
 
-        // Define storage helper function
+        // Define storage helper function with HTTPS
         window.storage = function(path) {
-            return "{{ asset('storage') }}/" + path;
+            let storageUrl = "{{ asset('storage') }}/" + path;
+            if (storageUrl.startsWith('http://')) {
+                storageUrl = storageUrl.replace('http://', 'https://');
+            }
+            return storageUrl;
         };
 
-        // Set initial locale for i18next
-        fetch('{{ route('initial-locale') }}')
+        // Set initial locale for i18next with HTTPS
+        const localeUrl = '{{ route('initial-locale') }}';
+        fetch(localeUrl.replace('http://', 'https://'))
             .then(response => response.text())
             .then(locale => {
                 window.initialLocale = locale;

@@ -23,7 +23,8 @@ function stripUseClientDirective(): import('vite').Plugin {
 }
 
 export default defineConfig({
-    base: './',
+    // Remove base: './' - this causes relative paths that break HTTPS
+    // base: './',
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/css/dark-mode.css', 'resources/js/app.tsx'],
@@ -34,7 +35,8 @@ export default defineConfig({
         tailwindcss(),
     ],
     server: {
-        host: 'localhost',
+        host: '0.0.0.0', // Changed from 'localhost' to bind to all interfaces
+        https: process.env.APP_ENV === 'production', // Enable HTTPS in production
         headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
@@ -65,5 +67,7 @@ export default defineConfig({
             },
         },
         assetsDir: 'assets',
+        // Force absolute URLs for assets in production
+        manifest: true,
     }
 });
